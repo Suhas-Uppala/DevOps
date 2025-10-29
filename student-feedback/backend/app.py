@@ -213,7 +213,14 @@ def health():
 
 
 if __name__ == '__main__':
+    # Get port from environment variable (Railway/Heroku) or default to 5000
+    port = int(os.getenv('PORT', 5000))
+    
     print("🚀 Starting Student Feedback API...")
-    print("📝 API will be available at http://localhost:5000")
-    print("📚 Visit http://localhost:5000 for API documentation")
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    print(f"📝 API will be available at http://0.0.0.0:{port}")
+    print(f"📚 Visit http://0.0.0.0:{port} for API documentation")
+    
+    # Use debug=False for production
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
