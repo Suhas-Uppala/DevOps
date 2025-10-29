@@ -23,7 +23,7 @@ CORS(app, resources={
 })
 
 # MongoDB Configuration
-MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb+srv://suhasuppala1805_db_user:uzbSTGnJ7QwLiQF6@cluster0.prhvzei.mongodb.net/')
 DATABASE_NAME = os.getenv('DATABASE_NAME', 'student_feedback_db')
 
 # Initialize MongoDB connection
