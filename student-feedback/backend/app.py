@@ -27,17 +27,21 @@ MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb+srv://suhasuppala1805_db_user:uz
 DATABASE_NAME = os.getenv('DATABASE_NAME', 'student_feedback_db')
 
 # Initialize MongoDB connection
+feedback_collection = None
+client = None
+
 try:
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+    # Test the connection
+    client.admin.command('ping')
     db = client[DATABASE_NAME]
     feedback_collection = db['feedbacks']
     print(f"✅ Connected to MongoDB: {DATABASE_NAME}")
 except Exception as e:
     print(f"❌ MongoDB Connection Error: {e}")
-    print("⚠️  Running without database - data will be lost on restart")
-    client = None
-    db = None
+    print("⚠️  Running without database - using in-memory storage")
     feedback_collection = None
+    client = None
 
 # Fallback in-memory storage if MongoDB is not available
 feedback_list = []
