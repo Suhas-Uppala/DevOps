@@ -487,9 +487,34 @@
             margin-bottom: 10px;
             color: #667eea;
         }
+        
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .logout-btn:hover {
+            background: white;
+            color: #667eea;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
+    <button class="logout-btn" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i> Logout
+    </button>
+    
     <div class="container">
         <div class="header">
             <h1>
@@ -601,9 +626,41 @@
     </div>
     
     <script>
-        const API_URL = 'https://devops-production-b806.up.railway.app/';
+        const API_URL = 'https://devops-production-b806.up.railway.app';
         let allFeedbackData = [];
         let currentFilter = 'all';
+        
+        // Check authentication on page load
+        function checkAuth() {
+            const token = localStorage.getItem('authToken');
+            const username = localStorage.getItem('username');
+            
+            if (!token || !username) {
+                // Redirect to login if not authenticated
+                window.location.href = 'auth.html';
+                return false;
+            }
+            
+            // Show username in header
+            document.querySelector('.subtitle').textContent = `Welcome, ${username}! 👋`;
+            return true;
+        }
+        
+        // Logout function
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('username');
+            window.location.href = 'auth.html';
+        }
+        
+        // Get auth headers
+        function getAuthHeaders() {
+            const token = localStorage.getItem('authToken');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
         
         // Check API connection status
         async function checkAPI() {
@@ -713,7 +770,17 @@
         // Load all feedback
         async function loadFeedback() {
             try {
-                const response = await fetch(`${API_URL}/feedback`);
+                const response = await fetch(`${API_URL}/feedback`, {
+                    headers: getAuthHeaders()
+                });
+                
+                // Check for authentication error
+                if (response.status === 401) {
+                    showStatus('Session expired. Please login again.', true);
+                    setTimeout(() => logout(), 2000);
+                    return;
+                }
+                
                 const data = await response.json();
                 
                 allFeedbackData = data.data;
@@ -763,9 +830,7 @@
             try {
                 const response = await fetch(`${API_URL}/feedback`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(feedback)
                 });
                 
@@ -776,7 +841,12 @@
                     document.getElementById('feedbackForm').reset();
                     await loadFeedback();
                 } else {
-                    showStatus('❌ ' + data.error, true);
+                    if (response.status === 401) {
+                        showStatus('Session expired. Please login again.', true);
+                        setTimeout(() => logout(), 2000);
+                    } else {
+                        showStatus('❌ ' + data.error, true);
+                    }
                 }
             } catch (error) {
                 showStatus('❌ Failed to submit feedback. Is the server running?', true);
@@ -791,7 +861,8 @@
             
             try {
                 const response = await fetch(`${API_URL}/feedback/${id}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
                 });
                 
                 const data = await response.json();
@@ -800,7 +871,12 @@
                     showStatus('✅ Feedback deleted successfully!');
                     await loadFeedback();
                 } else {
-                    showStatus('❌ ' + data.error, true);
+                    if (response.status === 401) {
+                        showStatus('Session expired. Please login again.', true);
+                        setTimeout(() => logout(), 2000);
+                    } else {
+                        showStatus('❌ ' + data.error, true);
+                    }
                 }
             } catch (error) {
                 showStatus('❌ Failed to delete feedback', true);
@@ -808,6 +884,11 @@
         }
         
         // Initialize
+        // Check authentication first
+        if (!checkAuth()) {
+            return; // Redirect to login if not authenticated
+        }
+        
         checkAPI();
         loadFeedback();
         
