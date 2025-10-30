@@ -636,8 +636,11 @@
             const username = localStorage.getItem('username');
             
             if (!token || !username) {
-                // Redirect to login if not authenticated
-                window.location.href = 'auth.html';
+                // Show login prompt instead of redirecting immediately
+                const subtitle = document.querySelector('.subtitle');
+                subtitle.innerHTML = `
+                    ⚠️ Please <a href="auth.html" style="color: white; text-decoration: underline;">Login</a> to use the feedback system
+                `;
                 return false;
             }
             
@@ -885,18 +888,26 @@
         
         // Initialize
         // Check authentication first
-        if (!checkAuth()) {
-            return; // Redirect to login if not authenticated
-        }
+        const isAuthenticated = checkAuth();
         
+        // Always check API status
         checkAPI();
-        loadFeedback();
         
-        // Auto-refresh every 10 seconds
-        setInterval(() => {
-            checkAPI();
+        // Only load feedback if authenticated
+        if (isAuthenticated) {
             loadFeedback();
-        }, 10000);
+            
+            // Auto-refresh every 10 seconds
+            setInterval(() => {
+                checkAPI();
+                loadFeedback();
+            }, 10000);
+        } else {
+            // Just refresh API status if not authenticated
+            setInterval(() => {
+                checkAPI();
+            }, 10000);
+        }
     </script>
 </body>
 </html>
