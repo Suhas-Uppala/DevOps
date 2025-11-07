@@ -1,0 +1,138 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    
+    - name: Run unit tests
+      run: |
+        cd backend
+        pytest tests/ -v --tb=short
+    
+    - name: Run tests with coverage
+      run: |
+        cd backend
+        pytest tests/ --cov=. --cov-report=html --cov-report=term
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: backend/htmlcov/
+
+  lint:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install linting tools
+      run: |
+        pip install flake8 pylint
+    
+    - name: Run Flake8
+      run: |
+        cd backend
+        flake8 app.py --max-line-length=100 --ignore=E501 || true
+    
+    - name: Run Pylint
+      run: |
+        cd backend
+        pylint app.py --disable=C0111,C0103 || true
+
+  build:
+    name: Build Docker Image
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Build Docker image
+      run: |
+        docker build -t student-feedback:${{ github.sha }} .
+    
+    - name: Test Docker image
+      run: |
+        docker run -d -p 5000:5000 --name test-container student-feedback:${{ github.sha }}
+        sleep 10
+        curl -f http://localhost:5000/ || exit 1
+        curl -f http://localhost:5000/health || exit 1
+        docker logs test-container
+        docker stop test-container
+        docker rm test-container
+    
+    - name: Save Docker image
+      if: github.ref == 'refs/heads/main'
+      run: |
+        docker save student-feedback:${{ github.sha }} -o student-feedback.tar
+        gzip student-feedback.tar
+    
+    - name: Upload Docker image artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v3
+      with:
+        name: docker-image
+        path: student-feedback.tar.gz
+        retention-days: 7
+
+  deploy:
+    name: Deploy Application
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Deployment notification
+      run: |
+        echo "🚀 Ready to deploy!"
+        echo "📦 Commit: ${{ github.sha }}"
+        echo "🌿 Branch: ${{ github.ref }}"
+        echo ""
+        echo "Configure deployment to:"
+        echo "  - AWS ECS/Fargate"
+        echo "  - Azure App Service"
+        echo "  - Google Cloud Run"
+        echo "  - Kubernetes cluster"
+        echo "  - Docker Hub/Registry"
+    
+    - name: Deployment placeholder
+      run: |
+        echo "Add your deployment steps here"
+        echo "Example: docker push, kubectl apply, etc."
