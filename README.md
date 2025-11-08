@@ -416,3 +416,67 @@ MIT License - Feel free to use this project for learning and interviews!
 ---
 
 **Made with ❤️ for DevOps learners**
+
+---
+
+## 🚦 CI/CD Pipeline Overview
+
+The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) implements a full multi‑stage pipeline:
+
+| Job | Purpose | Triggers |
+|-----|---------|----------|
+| Run Tests | Spin up MongoDB service, install deps, run pytest with coverage | push / PR to `main`, `develop` |
+| Code Quality Check | Run `flake8` + bugbear (strict, fails on issues) | push / PR |
+| Build Docker Image | Build & smoke test production image (only on `main`) | push to `main` |
+| Deploy Application | Optional Railway deploy if `RAILWAY_TOKEN` secret exists | push to `main` |
+
+### How It Works
+1. Tests job uses a MongoDB Docker service (`mongodb` hostname) and runs:
+  - `pytest --cov=app` producing `coverage.xml` and terminal report.
+  - Artifacts uploaded: pytest cache & coverage.
+2. Lint job fails the pipeline on any style or bugbear violations.
+3. Build job builds a fresh image (`--no-cache`) from `student-feedback/Dockerfile`, then:
+  - Starts container.
+  - Polls `/health` until success or timeout.
+  - Uploads compressed Docker image artifact.
+4. Deploy job runs only if a `RAILWAY_TOKEN` secret is defined.
+
+### Required Secrets (Optional Deploy)
+Add in GitHub repo settings → Secrets → Actions:
+```
+RAILWAY_TOKEN= <your railway token>
+SECRET_KEY= <flask jwt secret>
+MONGODB_URI= <atlas or other connection string>
+DATABASE_NAME= student_feedback_db
+```
+
+### Re‑run a Failed Job
+Open the Actions run → top right "Re-run jobs" → choose failed job or entire workflow.
+
+### Troubleshooting CI Failures
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| Tests job cannot connect to Mongo | Service health check flaked | Re-run workflow; ensure image tag unchanged |
+| Lint fails | style issues | Run `flake8 student-feedback/backend` locally, fix errors |
+| Build job smoke test fails | App not started yet | Increase poll loop or check logs artifact |
+| Deploy job skipped | Missing secret | Add `RAILWAY_TOKEN` secret |
+| bcrypt install error | Missing wheel | Ensure Python 3.11 and latest pip (already done) |
+
+### Local Parity Commands
+```powershell
+# Run tests with coverage locally
+cd d:\projects\DevOps\student-feedback\backend
+pytest -q --cov=app --cov-report=term-missing
+
+# Lint locally (same strictness as CI)
+flake8 .
+
+# Build and smoke test image locally
+cd d:\projects\DevOps\student-feedback
+docker build -t student-feedback:local .
+docker run -d -p 5000:5000 --name sf-local student-feedback:local
+curl http://localhost:5000/health
+docker logs sf-local
+```
+
+---
