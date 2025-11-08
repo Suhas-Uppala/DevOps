@@ -209,7 +209,7 @@ Press `Ctrl + C` in the PowerShell window.
 
 ---
 
-## 🔄 CI/CD PIPELINE WITH GITHUB
+## 🔄 CI/CD Pipeline (GitHub Actions)
 
 ### **STEP 1: Create GitHub Account**
 
@@ -426,28 +426,28 @@ The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) implements a full mu
 | Job | Purpose | Triggers |
 |-----|---------|----------|
 | Run Tests | Spin up MongoDB service, install deps, run pytest with coverage | push / PR to `main`, `develop` |
-| Code Quality Check | Run `flake8` + bugbear (strict, fails on issues) | push / PR |
+| Code Quality Check | Run `flake8` + bugbear (non-blocking by default) | push / PR |
 | Build Docker Image | Build & smoke test production image (only on `main`) | push to `main` |
-| Deploy Application | Optional Railway deploy if `RAILWAY_TOKEN` secret exists | push to `main` |
+| (Optional) Deploy | Add a deploy job when secrets configured | push to `main` |
 
 ### How It Works
 1. Tests job uses a MongoDB Docker service (`mongodb` hostname) and runs:
   - `pytest --cov=app` producing `coverage.xml` and terminal report.
   - Artifacts uploaded: pytest cache & coverage.
-2. Lint job fails the pipeline on any style or bugbear violations.
+2. Lint job reports style issues (currently non-blocking). You can make it blocking by removing `|| true`.
 3. Build job builds a fresh image (`--no-cache`) from `student-feedback/Dockerfile`, then:
   - Starts container.
   - Polls `/health` until success or timeout.
   - Uploads compressed Docker image artifact.
-4. Deploy job runs only if a `RAILWAY_TOKEN` secret is defined.
+4. Deployment omitted by default. Add a deploy job when ready (e.g., Railway, GHCR, or cloud provider).
 
-### Required Secrets (Optional Deploy)
+### Recommended Secrets (for production)
 Add in GitHub repo settings → Secrets → Actions:
 ```
-RAILWAY_TOKEN= <your railway token>
-SECRET_KEY= <flask jwt secret>
-MONGODB_URI= <atlas or other connection string>
-DATABASE_NAME= student_feedback_db
+SECRET_KEY=<flask jwt secret>
+MONGODB_URI=<your production connection string>
+DATABASE_NAME=student_feedback_db
+# (Add deployment tokens only when you introduce a deploy job)
 ```
 
 ### Re‑run a Failed Job
