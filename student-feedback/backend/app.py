@@ -29,7 +29,13 @@ CORS(app, resources={
 })
 
 # MongoDB Configuration
-MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb+srv://suhasuppala1805_db_user:uzbSTGnJ7QwLiQF6@cluster0.prhvzei.mongodb.net/')
+# Default to localhost for development/CI. In production, set MONGODB_URI to your
+# Atlas connection string via environment variables or secrets. Do NOT commit
+# production credentials into the repository.
+#
+# Note: GitHub Actions service host for the mongodb service below will be
+# reachable at 'mongodb' (service name). In CI we set MONGODB_URI accordingly.
+MONGODB_URI = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
 DATABASE_NAME = os.getenv('DATABASE_NAME', 'student_feedback_db')
 
 # Initialize MongoDB connection
